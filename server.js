@@ -3,45 +3,69 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const dotenv = require('dotenv');
 const cors = require('cors');
 
-// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000; // Use Render's port or default to 3000
+const port = process.env.PORT || 3000;
 
+// 增加请求体大小限制，以支持Base64图片数据
+app.use(express.json({ limit: '10mb' }));
 app.use(cors());
-app.use(express.json());
 app.use(express.static('public'));
 
-// Check for API key
 if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not defined in the environment variables.");
+    throw new Error("GEMINI_API_KEY is not defined.");
 }
 
-// Initialize Google AI with the API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// API endpoint for chat
 app.post('/chat', async (req, res) => {
     try {
-        const { history, message } = req.body;
+        const { history, message, image } = req.body;
 
         if (!message) {
             return res.status(400).json({ error: 'Message is required' });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        let model;
+        let promptParts = [];
 
-        const chat = model.startChat({
-            history: history || [],
+        // --- 核心逻辑：判断是否有图片 ---
+        if (image) {
+            console.log("Image received, switching to gemini-pro-vision model.");
+            // 1. 如果有图片，使用多模态模型
+            model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+            
+            // 2. 准备图片数据部分
+            const imagePart = {
+                inlineData: {
+                    mimeType: image.mimeType,
+                    data: image.data
+                }
+            };
+
+            // 3. 构造包含文字和图片的提示
+            promptParts = [message, imagePart];
+
+        } else {
+            // 4. 如果没有图片，继续使用文本模型
+            model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+            promptParts = [message];
+        }
+
+        // --- 流式返回 ---
+        const result = await model.generateContentStream({
+            contents: [{ role: "user", parts: promptParts }],
+            generationConfig: {
+                maxOutputTokens: 2048,
+            },
         });
-
-        const result = await chat.sendMessageStream(message);
-
+        
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
-
+        
+        // 直接从 result 获取流
         for await (const chunk of result.stream) {
             const chunkText = chunk.text();
             res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
