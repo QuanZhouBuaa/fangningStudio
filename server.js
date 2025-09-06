@@ -49,7 +49,7 @@ app.post('/chat', async (req, res) => {
 
         } else {
             // 4. 如果没有图片，继续使用文本模型
-            model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+            model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
             promptParts = [message];
         }
 
