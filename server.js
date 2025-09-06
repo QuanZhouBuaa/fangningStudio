@@ -22,16 +22,14 @@ app.post('/chat', async (req, res) => {
     try {
         const { history, message, image } = req.body;
 
-        if (!message && !image) { // 修正：必须有文字或图片
+        if (!message && !image) {
             return res.status(400).json({ error: 'Message or image is required' });
         }
 
         let model;
         let promptParts = [];
 
-        // 将文字部分包装成对象
-        // 即使 message 是空字符串，也包含 text part，这对某些多模态场景有帮助
-        const textPart = { text: message || "" }; 
+        const textPart = { text: message || "" };
 
         if (image) {
             console.log("Image received, using gemini-pro-vision model.");
@@ -43,17 +41,15 @@ app.post('/chat', async (req, res) => {
                     data: image.data
                 }
             };
-            // 正确的格式：[text, image]
             promptParts = [textPart, imagePart];
 
         } else {
             console.log("No image, using gemini-1.0-pro model.");
             model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-            // 正确的格式：[text]
             promptParts = [textPart];
         }
         
-        console.log("Sending parts to Gemini:", JSON.stringify(promptParts, null, 2));
+        console.log("Sending parts to Gemini:", JSON.stringify(promptParts[0])); // 只打印第一部分避免图片数据刷屏
 
         const result = await model.generateContentStream({
             contents: [{ role: "user", parts: promptParts }],
@@ -79,5 +75,4 @@ app.post('/chat', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-});```
-
+});
