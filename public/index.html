@@ -13,7 +13,14 @@
     <div id="background-animation"></div>
     <div class="chat-container">
         <div class="chat-header">
-            <!-- ... 头部内容不变 ... -->
+            <div class="header-title">
+                <h1>工业大模型交互终端</h1>
+                <p>Industrial AI Interface</p>
+            </div>
+            <div class="system-status">
+                <span class="status-light"></span>
+                <span>作者：史芳宁</span>
+            </div>
         </div>
         <div class="chat-box" id="chat-box">
             <!-- 消息会在这里动态生成 -->
@@ -44,7 +51,8 @@
                     <div class="input-glow"></div>
                 </div>
                 <button type="submit" id="send-btn" title="发送指令">
-                    <!-- ... 发送按钮 SVG 不变 ... -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                 </button>
             </form>
         </div>
