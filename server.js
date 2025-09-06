@@ -80,15 +80,4 @@ app.post('/chat', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });```
-*(我额外加入了一行 `console.log` 来打印将要发送给 Gemini 的数据，这能帮助我们更好地在 Render 日志中调试)*
 
-### 行动计划
-
-1.  用上面提供的**最终代码**替换你本地的 `server.js`。
-2.  执行 `git add server.js`。
-3.  执行 `git commit -m "fix: Force correct data structure for Gemini API"`。
-4.  执行 `git push origin main`。
-5.  去 Render 网站，**手动触发一次部署**，并**观察日志**确保最新的 commit 被拉取。
-6.  部署成功后，**强制刷新**你的网站并测试。
-
-这次我们通过验证 GitHub 代码和手动触发部署，确保了正确的代码一定能运行在服务器上，问题一定能得到解决。
