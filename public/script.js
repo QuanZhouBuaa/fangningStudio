@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const data = JSON.parse(line.substring(6));
                             if (data.text) {
                                 botResponse += data.text;
-                                contentElement.innerText = botResponse; // 使用 innerText 防止 XSS
+                                contentElement.innerHTML = DOMPurify.sanitize(marked.parse(botResponse)); // 使用 innerText 防止 XSS
                                 scrollToBottom();
                             }
                         } catch(e) {
