@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             const errorContainer = botMessageContainer.querySelector('div') || botMessageContainer;
-            errorContainer.innerText = '抱歉，出错了。请检查后端服务是否正常运行，以及API密钥是否有效。';
+            errorContainer.innerHTML = '抱歉，出错了。请检查后端服务是否正常运行。';
             console.error('Error:', error);
         } finally {
             setFormDisabled(false);
