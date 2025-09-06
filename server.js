@@ -8,9 +8,13 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// --- 关键区域 ---
+// 下面这三行代码的顺序很重要
 app.use(express.json({ limit: '10mb' }));
 app.use(cors());
-app.use(express.static('public'));
+// 确保这一行存在！它告诉 Express 去哪里找 CSS, JS 和 HTML 文件
+app.use(express.static('public')); 
+// ---------------
 
 if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not defined.");
@@ -44,13 +48,11 @@ app.post('/chat', async (req, res) => {
             promptParts = [textPart, imagePart];
 
         } else {
-            console.log("No image, using gemini-1.0-pro model.");
-            model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+            console.log("No image, using gemini-2.5-pro model.");
+            model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
             promptParts = [textPart];
         }
         
-        console.log("Sending parts to Gemini:", JSON.stringify(promptParts[0])); // 只打印第一部分避免图片数据刷屏
-
         const result = await model.generateContentStream({
             contents: [{ role: "user", parts: promptParts }],
             generationConfig: { maxOutputTokens: 2048 },
