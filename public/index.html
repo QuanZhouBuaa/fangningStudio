@@ -19,21 +19,51 @@
             </div>
             <div class="system-status">
                 <span class="status-light"></span>
-                <span>随时随地为您服务</span>
-            </div>
-        </div>
-        <div class="chat-box" id="chat-box">
-            <!-- 消息会在这里动态生成 -->
-        </div>
-        
-        <!-- 新增：图片预览区域 -->
-        <div class="image-preview-area" id="image-preview-area">
-            <div class="image-preview-container">
-                <img id="preview-image" src="#" alt="Image preview" />
-                <button id="remove-image-btn" title="移除图片">&times;</button>
+                <span>SYSTEM ONLINE</span>
             </div>
         </div>
 
+        <div class="main-content">
+            <!-- 初始界面 -->
+            <div id="initial-view">
+                <div class="robot-container">
+                    <svg id="robot-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <filter id="glow">
+                                <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+                                <feMerge>
+                                    <feMergeNode in="coloredBlur"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Head -->
+                        <path id="head-outline" d="M 25 30 Q 20 30 20 35 V 70 Q 20 75 25 75 H 75 Q 80 75 80 70 V 35 Q 80 30 75 30 Z" />
+                        <!-- Eye -->
+                        <rect id="eye" x="30" y="45" width="40" height="10" rx="2" />
+                        <!-- Antennas -->
+                        <line id="antenna-left" x1="35" y1="30" x2="25" y2="20" />
+                        <line id="antenna-right" x1="65" y1="30" x2="75" y2="20" />
+                        <circle id="antenna-dot-left" cx="25" cy="20" r="2" />
+                        <circle id="antenna-dot-right" cx="75" cy="20" r="2" />
+                         <!-- Circuits -->
+                        <path id="circuit-1" d="M 25 40 H 15 V 60 H 25" />
+                        <path id="circuit-2" d="M 75 45 H 85 V 55 H 75" />
+                    </svg>
+                </div>
+                <h2>你好，我是工业智能助手</h2>
+                <p class="subtitle">你可以直接提问，或尝试以下示例：</p>
+                <div class="suggestion-chips">
+                    <button class="chip">解释一下什么是“数字孪生”</button>
+                    <button class="chip">对比一下OPC-UA和MQTT协议的优缺点</button>
+                    <button class="chip">如何对工厂设备进行预测性维护？</button>
+                    <button class="chip">生成一段用于控制机械臂的Python代码</button>
+                </div>
+            </div>
+
+            <!-- 聊天消息界面 (默认隐藏) -->
+            <div class="chat-box hidden" id="chat-box"></div>
+        </div>
         <div class="chat-input-area">
             <form id="chat-form">
                  <!-- 新增：隐藏的文件输入框 -->
