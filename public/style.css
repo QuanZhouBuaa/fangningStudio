@@ -1,432 +1,196 @@
-/* --- 在 style.css 文件顶部添加 --- */
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM 元素获取 ---
+    const initialView = document.getElementById('initial-view');
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const attachBtn = document.getElementById('attach-btn');
+    const imageInput = document.getElementById('image-input');
+    const imagePreviewArea = document.getElementById('image-preview-area');
+    const previewImage = document.getElementById('preview-image');
+    const removeImageBtn = document.getElementById('remove-image-btn');
+    const suggestionChipsContainer = document.querySelector('.suggestion-chips');
 
-.main-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-}
+    // --- 状态变量 ---
+    let isChatStarted = false;
+    let uploadedImage = null;
 
-#initial-view {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 20px;
-    height: 100%;
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-}
+    // --- 事件监听 ---
+    // 用户手动输入并提交表单
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = userInput.value.trim();
+        if (!message && !uploadedImage) return;
 
-#initial-view.fade-out {
-    opacity: 0;
-    transform: scale(0.95);
-}
+        appendMessage('user', message, uploadedImage ? uploadedImage.previewUrl : null);
+        getAiResponse(message, uploadedImage);
+        
+        userInput.value = '';
+        removeUploadedImage();
+    });
 
-.hidden {
-    display: none !important;
-}
+    // 点击推荐问题
+    suggestionChipsContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chip')) {
+            const message = e.target.innerText;
+            // 直接获取AI回复，不显示用户问题
+            getAiResponse(message, null);
+        }
+    });
 
-.robot-container {
-    width: 120px;
-    height: 120px;
-    margin-bottom: 20px;
-    animation: float-animation 4s ease-in-out infinite;
-}
+    // 其他事件监听
+    attachBtn.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', handleImageSelection);
+    removeImageBtn.addEventListener('click', removeUploadedImage);
 
-#robot-svg {
-    width: 100%;
-    height: 100%;
-    stroke: var(--primary-color);
-    stroke-width: 1.5;
-    fill: none;
-    filter: url(#glow);
-}
+    // --- 核心函数 ---
 
-#head-outline {
-    fill: rgba(11, 45, 72, 0.5);
-}
+    // 获取AI回复 (重构的核心)
+    async function getAiResponse(message, image) {
+        switchToChatView();
+        setFormDisabled(true);
 
-#eye {
-    fill: var(--primary-color);
-    animation: scan-animation 5s linear infinite;
-}
+        const botMessageContainer = appendMessage('bot', '');
 
-#antenna-dot-left, #antenna-dot-right {
-    fill: var(--primary-color);
-    animation: pulse-glow 2s infinite;
-}
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, image }),
+            });
 
-#circuit-1, #circuit-2 {
-    stroke-dasharray: 100;
-    stroke-dashoffset: 100;
-    animation: draw-line 3s infinite alternate;
-}
+            if (!response.ok || !response.body) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-#initial-view h2 {
-    font-size: 1.5em;
-    color: var(--text-color);
-    margin-bottom: 10px;
-}
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let botResponse = '';
+            
+            const thinkingCursor = botMessageContainer.querySelector('.thinking');
+            if (thinkingCursor) thinkingCursor.remove();
+            
+            const contentElement = document.createElement('div');
+            botMessageContainer.appendChild(contentElement);
 
-#initial-view .subtitle {
-    font-size: 0.9em;
-    color: var(--text-color);
-    opacity: 0.7;
-    margin-bottom: 30px;
-}
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-.suggestion-chips {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    max-width: 90%;
-}
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n\n');
 
-.chip {
-    background-color: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 8px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-family: 'Roboto Mono', monospace;
-    transition: all 0.3s ease;
-}
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.substring(6));
+                            if (data.text) {
+                                botResponse += data.text;
+                                contentElement.innerHTML = DOMPurify.sanitize(marked.parse(botResponse));
+                                scrollToBottom();
+                            }
+                        } catch(e) { console.error("Failed to parse JSON chunk:", line); }
+                    }
+                }
+            }
+        } catch (error) {
+            const errorContainer = botMessageContainer.querySelector('div') || botMessageContainer;
+            errorContainer.innerHTML = '抱歉，出错了。请检查后端服务是否正常运行。';
+            console.error('Error:', error);
+        } finally {
+            setFormDisabled(false);
+            userInput.focus();
+        }
+    }
 
-.chip:hover {
-    background-color: var(--primary-color);
-    color: var(--bg-color);
-    box-shadow: 0 0 15px var(--glow-color);
-    transform: translateY(-2px);
-}
+    // --- 辅助函数 ---
 
-/* --- 动画定义 --- */
-@keyframes float-animation {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
+    // 切换到聊天界面
+    function switchToChatView() {
+        if (isChatStarted) return;
+        initialView.classList.add('fade-out');
+        setTimeout(() => {
+            initialView.classList.add('hidden');
+            chatBox.classList.add('active');
+        }, 300); // 匹配CSS动画时长
+        isChatStarted = true;
+    }
+    
+    // 处理图片选择
+    function handleImageSelection(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64String = e.target.result;
+            uploadedImage = {
+                data: base64String.split(',')[1], 
+                mimeType: file.type,
+                previewUrl: base64String
+            };
+            previewImage.src = uploadedImage.previewUrl;
+            imagePreviewArea.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
 
-@keyframes scan-animation {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(20px); }
-    75% { transform: translateX(-20px); }
-}
+    // 移除图片
+    function removeUploadedImage() {
+        if (!uploadedImage) return;
+        uploadedImage = null;
+        imageInput.value = '';
+        imagePreviewArea.style.display = 'none';
+    }
 
-@keyframes pulse-glow {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
+    // 禁用/启用表单
+    function setFormDisabled(disabled) {
+        userInput.disabled = disabled;
+        sendBtn.disabled = disabled;
+        attachBtn.disabled = disabled;
+    }
 
-@keyframes draw-line {
-    to { stroke-dashoffset: 0; }
-}
+    // 添加消息到聊天框
+    function appendMessage(sender, text, imageUrl = null) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', `${sender}-message`);
 
+        if (sender === 'bot') {
+            const avatar = document.createElement('div');
+            avatar.classList.add('bot-avatar');
+            avatar.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2a9.98 9.98 0 00-6.48 2.54 10.02 10.02 0 00-3.46 7.46C2.06 17.52 7.5 22 12 22s9.94-4.48 9.94-9.94A10.02 10.02 0 0018.48 4.54A9.98 9.98 0 0012 2zm0 18c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7zm-3-7a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm6 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>`;
+            messageElement.appendChild(avatar);
 
-/* --- 将原有的 .chat-box 样式稍微调整 --- */
-.chat-box {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 1;
-    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
-    transform: scale(1);
-}
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.classList.add('thinking');
+            thinkingDiv.innerHTML = '<span class="cursor"></span>';
+            messageElement.appendChild(thinkingDiv);
+        } else {
+            const textContent = document.createElement('div');
+            textContent.classList.add('user-message-content');
+            
+            if (text) {
+                const textElement = document.createElement('p');
+                textElement.innerText = text;
+                textContent.appendChild(textElement);
+            }
 
-.chat-box.fade-in {
-    opacity: 1;
-    transform: scale(1);
-}
+            if (imageUrl) {
+                const imgElement = document.createElement('img');
+                imgElement.src = imageUrl;
+                imgElement.style.maxWidth = '200px';
+                imgElement.style.borderRadius = '4px';
+                textContent.appendChild(imgElement);
+            }
+            messageElement.appendChild(textContent);
+        }
 
-/* --- 确保其他样式文件中的 .chat-box 初始 opacity 为 0 --- */
-.main-content > .chat-box {
-    opacity: 0;
-    transform: scale(0.95);
-}
+        chatBox.appendChild(messageElement);
+        scrollToBottom();
+        return messageElement;
+    }
 
-/* --- 在文件末尾添加这段 --- */
-.user-message-content {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-/* --- CSS 变量定义 --- */
-:root {
-    --bg-color: #0d1a26;
-    --primary-color: #00aaff;
-    --secondary-color: #0b2d48;
-    --text-color: #e6f1ff;
-    --bot-msg-bg: rgba(13, 38, 62, 0.8);
-    --user-msg-bg: rgba(0, 99, 153, 0.8);
-    --border-color: rgba(0, 170, 255, 0.3);
-    --glow-color: rgba(0, 170, 255, 0.5);
-}
-
-/* --- 基础和背景 --- */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: 'Roboto Mono', monospace;
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    overflow: hidden;
-}
-
-#background-animation {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        linear-gradient(rgba(0, 170, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 170, 255, 0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
-    z-index: -1;
-    animation: pan-background 60s linear infinite;
-}
-
-@keyframes pan-background {
-    0% { background-position: 0 0; }
-    100% { background-position: 1200px 600px; }
-}
-
-/* --- 聊天容器 --- */
-.chat-container {
-    width: 90%;
-    max-width: 800px;
-    height: 95vh;
-    background-color: rgba(11, 22, 34, 0.75);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 0 25px var(--glow-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-/* --- 聊天头部 --- */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 25px;
-    border-bottom: 1px solid var(--border-color);
-    background: linear-gradient(to right, var(--secondary-color), transparent);
-}
-.header-title h1 {
-    font-size: 1.2em;
-    color: var(--primary-color);
-    text-shadow: 0 0 5px var(--glow-color);
-}
-.header-title p {
-    font-size: 0.7em;
-    opacity: 0.7;
-    text-transform: uppercase;
-}
-.system-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8em;
-    color: #39ff14;
-}
-.status-light {
-    width: 10px;
-    height: 10px;
-    background-color: #39ff14;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #39ff14;
-    animation: pulse 1.5s infinite;
-}
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-
-/* --- 聊天消息区域 --- */
-.chat-box {
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.chat-box::-webkit-scrollbar {
-    width: 8px;
-}
-.chat-box::-webkit-scrollbar-track {
-    background: transparent;
-}
-.chat-box::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color);
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
-
-.message {
-    max-width: 85%;
-    padding: 12px 18px;
-    line-height: 1.6;
-    word-wrap: break-word;
-    border-radius: 4px;
-    position: relative;
-    animation: fadeIn 0.5s ease;
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.user-message {
-    background-color: var(--user-msg-bg);
-    align-self: flex-end;
-    border-right: 2px solid var(--primary-color);
-}
-
-.bot-message {
-    background-color: var(--bot-msg-bg);
-    align-self: flex-start;
-    border-left: 2px solid var(--text-color);
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
-}
-.bot-avatar {
-    padding-top: 5px;
-    opacity: 0.8;
-}
-
-.thinking .cursor {
-    display: inline-block;
-    width: 10px;
-    height: 1.2em;
-    background-color: var(--primary-color);
-    animation: blink 1s step-end infinite;
-}
-@keyframes blink {
-  from, to { background-color: transparent }
-  50% { background-color: var(--primary-color); }
-}
-
-
-/* --- 输入区域 --- */
-.chat-input-area {
-    padding: 15px 25px;
-    border-top: 1px solid var(--border-color);
-}
-#chat-form {
-    display: flex;
-    gap: 15px;
-}
-.input-wrapper {
-    flex-grow: 1;
-    position: relative;
-}
-#user-input {
-    width: 100%;
-    background-color: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 12px 15px;
-    font-family: 'Roboto Mono', monospace;
-    color: var(--text-color);
-    font-size: 1em;
-    transition: all 0.3s ease;
-}
-#user-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 15px var(--glow-color);
-}
-
-#send-btn {
-    background-color: var(--primary-color);
-    border: none;
-    border-radius: 4px;
-    padding: 0 15px;
-    cursor: pointer;
-    color: var(--bg-color);
-    transition: all 0.3s ease;
-}
-#send-btn:hover {
-    box-shadow: 0 0 15px var(--glow-color);
-    transform: scale(1.05);
-}
-#send-btn:disabled {
-    background-color: var(--secondary-color);
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-}
-
-/* 图片预览区域 */
-.image-preview-area {
-    padding: 0 25px 10px;
-    border-bottom: 1px solid var(--border-color);
-    display: none; /* 默认隐藏 */
-}
-.image-preview-container {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    border: 1px solid var(--border-color);
-    background-color: var(--secondary-color);
-    border-radius: 4px;
-    overflow: hidden;
-}
-#preview-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-#remove-image-btn {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 20px;
-    height: 20px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 16px;
-    line-height: 20px;
-}
-
-/* 附件按钮样式 */
-#attach-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    color: var(--primary-color);
-    border-radius: 4px;
-    padding: 0 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-#attach-btn:hover {
-    background-color: var(--secondary-color);
-    box-shadow: 0 0 10px var(--glow-color);
-}
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+});
