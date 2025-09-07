@@ -63,4 +63,4 @@ app.post('/chat', async (req, res) => {
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-});```
+}); // <-- 这一行的 }); 在上次被截断了，现在是完整的。
