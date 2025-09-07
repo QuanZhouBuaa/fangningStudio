@@ -36,14 +36,14 @@ app.post('/chat', async (req, res) => {
             const imagePart = { inlineData: { mimeType: image.mimeType, data: image.data } };
             promptParts = [textPart, imagePart];
         } else {
-            console.log("No image, using gemini-1.0-pro model.");
+            console.log("No image, using gemini-pro model.");
             model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
             promptParts = [textPart];
         }
         
         const result = await model.generateContentStream({
             contents: [{ role: "user", parts: promptParts }],
-            generationConfig: { maxOutputTokens: 2048 },
+            generationConfig: { maxOutputTokens: 8192 },
         });
         
         res.setHeader('Content-Type', 'text/event-stream');
