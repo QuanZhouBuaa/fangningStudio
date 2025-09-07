@@ -1,3 +1,159 @@
+/* --- 在 style.css 文件顶部添加 --- */
+
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+#initial-view {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+    height: 100%;
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+#initial-view.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.robot-container {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    animation: float-animation 4s ease-in-out infinite;
+}
+
+#robot-svg {
+    width: 100%;
+    height: 100%;
+    stroke: var(--primary-color);
+    stroke-width: 1.5;
+    fill: none;
+    filter: url(#glow);
+}
+
+#head-outline {
+    fill: rgba(11, 45, 72, 0.5);
+}
+
+#eye {
+    fill: var(--primary-color);
+    animation: scan-animation 5s linear infinite;
+}
+
+#antenna-dot-left, #antenna-dot-right {
+    fill: var(--primary-color);
+    animation: pulse-glow 2s infinite;
+}
+
+#circuit-1, #circuit-2 {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: draw-line 3s infinite alternate;
+}
+
+#initial-view h2 {
+    font-size: 1.5em;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+#initial-view .subtitle {
+    font-size: 0.9em;
+    color: var(--text-color);
+    opacity: 0.7;
+    margin-bottom: 30px;
+}
+
+.suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 90%;
+}
+
+.chip {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Roboto Mono', monospace;
+    transition: all 0.3s ease;
+}
+
+.chip:hover {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    box-shadow: 0 0 15px var(--glow-color);
+    transform: translateY(-2px);
+}
+
+/* --- 动画定义 --- */
+@keyframes float-animation {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes scan-animation {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(20px); }
+    75% { transform: translateX(-20px); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes draw-line {
+    to { stroke-dashoffset: 0; }
+}
+
+
+/* --- 将原有的 .chat-box 样式稍微调整 --- */
+.chat-box {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+    transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+    transform: scale(1);
+}
+
+.chat-box.fade-in {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* --- 确保其他样式文件中的 .chat-box 初始 opacity 为 0 --- */
+.main-content > .chat-box {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+/* --- 在文件末尾添加这段 --- */
+.user-message-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 /* --- CSS 变量定义 --- */
 :root {
     --bg-color: #0d1a26;
