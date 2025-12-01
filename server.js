@@ -37,7 +37,7 @@ app.post('/chat', async (req, res) => {
             promptParts = [textPart, imagePart];
         } else {
             console.log("No image, using gemini-pro model.");
-            model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+            model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
             promptParts = [textPart];
         }
         
